@@ -6,29 +6,38 @@
   <meta name="description" content="在浏览器本地运行 Python 规则的 SQL 格式化工具。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; style-src 'self'; connect-src 'self' https://cdn.jsdelivr.net; worker-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
   <title>SQL Formatter · Python 本地版</title>
-  <link rel="stylesheet" href="./tool.css">
+  <link rel="stylesheet" href="./tool.css?v=2">
   <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js" defer></script>
   <script src="./app.js?v=2" defer></script>
 </head>
 <body>
   <main class="shell">
-    <div class="topbar"><div class="eyebrow">LOCAL PYTHON / SQL</div><a class="nav" href="../">← 工具箱</a></div>
-    <h1>SQL Formatter</h1>
-    <p class="lede">把原来的 Python 规则格式化器放进浏览器，通过 Pyodide 在本地执行。SQL 内容不会发送到服务器。</p>
+    <nav class="topbar" aria-label="页面导航">
+      <div class="brand"><span class="brand-mark">SQL</span><span>Browser Workbench</span></div>
+      <a class="nav" href="../">工具箱首页 ↗</a>
+    </nav>
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">PYTHON / WEBASSEMBLY / LOCAL</div>
+        <h1>SQL Formatter<br><span class="accent">Python 本地版</span></h1>
+        <p class="lede">原 Python 规则直接在浏览器执行。适合不允许上传的 SQL，以及快速统一关键字、缩进和前导逗号。</p>
+      </div>
+      <div class="trust" aria-label="隐私与运行方式"><span class="chip safe">SQL 不上传</span><span class="chip">Pyodide</span><span class="chip">纯标准库</span></div>
+    </header>
     <section class="workspace" aria-label="SQL 格式化工作区">
-      <div class="panel">
-        <div class="panel-head"><h2>输入 SQL</h2><button id="clear" type="button">清空</button></div>
-        <textarea id="input" spellcheck="false" aria-label="SQL 输入">select user_id, count(*) as total from orders where status = 'paid' group by user_id order by total desc;</textarea>
-        <div class="controls"><button class="primary" id="format" type="button">本地格式化</button><span class="small">首次使用会加载 Python WebAssembly 运行时</span></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h2>格式化结果</h2><button id="copy" type="button">复制</button></div>
-        <textarea id="output" spellcheck="false" aria-label="SQL 输出" readonly></textarea>
-        <p class="status" id="status" role="status">点击“本地格式化”开始。</p>
-      </div>
+      <article class="panel editor-panel">
+        <div class="panel-head"><div class="panel-title"><h2>输入 SQL</h2></div><button class="ghost" id="clear" type="button">清空</button></div>
+        <textarea class="editor" id="input" spellcheck="false" aria-label="SQL 输入">select user_id, count(*) as total from orders where status = 'paid' group by user_id order by total desc;</textarea>
+        <div class="panel-foot"><span class="small">首次使用会加载 Python WebAssembly 运行时</span><button class="primary" id="format" type="button">运行 Python 格式化</button></div>
+      </article>
+      <article class="panel editor-panel output-panel">
+        <div class="panel-head"><div class="panel-title"><h2>格式化结果</h2></div><button class="ghost" id="copy" type="button">复制结果</button></div>
+        <textarea class="editor" id="output" spellcheck="false" aria-label="SQL 输出" readonly></textarea>
+        <div class="panel-foot"><p class="status" id="status" role="status">等待输入。</p></div>
+      </article>
     </section>
-    <p class="notice">说明：这是原规则脚本的浏览器版，依赖纯 Python 标准库；原脚本的目录扫描、文件读写和命令行参数没有放进网页。</p>
-    <footer><a href="../sql-ai/">切换到 DeepSeek AI 版</a></footer>
+    <p class="privacy-note"><span class="privacy-icon">i</span><span><strong>运行边界：</strong>SQL 仅在当前浏览器内处理；Pyodide 运行时从 jsDelivr 加载。目录扫描、文件写入和命令行部分没有放进网页。</span></p>
+    <footer><span>SQL Tools / client-side</span><a href="../sql-ai/">使用 DeepSeek AI 版 →</a></footer>
   </main>
 </body>
 </html>

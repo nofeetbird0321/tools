@@ -6,32 +6,45 @@
   <meta name="description" content="使用 DeepSeek AI 格式化 SQL。API Key 只保存在当前浏览器。">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.deepseek.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
   <title>SQL Formatter · DeepSeek AI 版</title>
-  <link rel="stylesheet" href="../sql/tool.css">
-  <script src="./app.js" defer></script>
+  <link rel="stylesheet" href="../sql/tool.css?v=2">
+  <script src="./app.js?v=2" defer></script>
 </head>
 <body>
   <main class="shell">
-    <div class="topbar"><div class="eyebrow">DEEPSEEK / SQL</div><a class="nav" href="../">← 工具箱</a></div>
-    <h1>SQL Formatter <span style="color:var(--accent-2)">AI</span></h1>
-    <p class="lede">用 DeepSeek 处理复杂 SQL。页面没有后端，API Key 只保存在当前 Chrome 的站点 localStorage。</p>
-    <section class="panel">
-      <label class="field"><span>DeepSeek API Key</span><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…"></label>
-      <div class="controls"><button id="save-key" type="button">保存到本浏览器</button><button id="clear-key" type="button">删除本地 Key</button><span class="small">不会写入 GitHub；但网页脚本可读取此站点存储。</span></div>
-    </section>
-    <section class="workspace" aria-label="AI SQL 格式化工作区" style="margin-top:16px">
-      <div class="panel">
-        <div class="panel-head"><h2>输入 SQL</h2></div>
-        <textarea id="input" spellcheck="false" aria-label="SQL 输入">select user_id, count(*) as total from orders where status = 'paid' group by user_id order by total desc;</textarea>
-        <div class="controls"><button class="primary" id="format" type="button">AI 格式化</button></div>
+    <nav class="topbar" aria-label="页面导航">
+      <div class="brand"><span class="brand-mark">SQL</span><span>Browser Workbench</span></div>
+      <a class="nav" href="../">工具箱首页 ↗</a>
+    </nav>
+    <header class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">DEEPSEEK API / CUSTOM MODEL</div>
+        <h1>SQL Formatter<br><span class="accent">AI 增强版</span></h1>
+        <p class="lede">复杂查询交给 DeepSeek 整理。你可以自由填写模型名；API Key 只保存在当前浏览器的站点存储中。</p>
       </div>
-      <div class="panel">
-        <div class="panel-head"><h2>格式化结果</h2><button id="copy" type="button">复制</button></div>
-        <textarea id="output" spellcheck="false" aria-label="SQL 输出" readonly></textarea>
-        <p class="status" id="status" role="status">未发送请求。</p>
+      <div class="trust" aria-label="隐私与运行方式"><span class="chip">自定义模型</span><span class="chip">Key 本地保存</span><span class="chip">直连 DeepSeek</span></div>
+    </header>
+    <section class="panel config-panel" aria-label="DeepSeek 设置">
+      <div class="config-grid">
+        <label class="field"><span>DeepSeek API Key</span><input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…"><small>只保存到当前浏览器，不写入网页代码或 GitHub。</small></label>
+        <label class="field"><span>模型名</span><input id="model-name" list="model-options" autocomplete="off" spellcheck="false" value="deepseek-v4-flash"><small>可输入 DeepSeek 支持的任意模型名。</small></label>
+        <datalist id="model-options"><option value="deepseek-v4-flash"><option value="deepseek-v4-pro"></datalist>
       </div>
+      <div class="config-actions"><button id="save-key" type="button">保存设置</button><button class="ghost" id="clear-key" type="button">删除本地 Key</button></div>
     </section>
-    <p class="notice">隐私边界：AI 版会把输入 SQL 发送给 DeepSeek；不要输入生产密码、Token、客户数据或不允许外传的 SQL。需要绝对本地处理时，请使用 Python 本地版。</p>
-    <footer><a href="../sql/">切换到 Python 本地版</a></footer>
+    <section class="workspace" aria-label="AI SQL 格式化工作区">
+      <article class="panel editor-panel">
+        <div class="panel-head"><div class="panel-title"><h2>输入 SQL</h2></div></div>
+        <textarea class="editor" id="input" spellcheck="false" aria-label="SQL 输入">select user_id, count(*) as total from orders where status = 'paid' group by user_id order by total desc;</textarea>
+        <div class="panel-foot"><span class="small">请求会直接从浏览器发送到 DeepSeek</span><button class="primary" id="format" type="button">使用 AI 格式化</button></div>
+      </article>
+      <article class="panel editor-panel output-panel">
+        <div class="panel-head"><div class="panel-title"><h2>格式化结果</h2></div><button class="ghost" id="copy" type="button">复制结果</button></div>
+        <textarea class="editor" id="output" spellcheck="false" aria-label="SQL 输出" readonly></textarea>
+        <div class="panel-foot"><p class="status" id="status" role="status">尚未发送请求。</p></div>
+      </article>
+    </section>
+    <p class="privacy-note"><span class="privacy-icon">!</span><span><strong>隐私边界：</strong>AI 版会把输入 SQL 发送给 DeepSeek。不要提交生产密码、Token、客户数据或禁止外传的 SQL；敏感内容请使用 Python 本地版。</span></p>
+    <footer><span>SQL Tools / DeepSeek API</span><a href="../sql/">使用 Python 本地版 →</a></footer>
   </main>
 </body>
 </html>
