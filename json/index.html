@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; media-src 'none'; worker-src 'none'">
+<title>JSON4Editor - 本地 JSON 编辑器</title>
+<meta name="description" content="一个纯本地 JSON 编辑器，支持树形视图、代码编辑、格式化、压缩、图形化展示等功能">
+<style>
+/* ===== CSS Reset & Variables ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Treease Dark Theme Palette */
+  --bg-primary: #0b0f17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #151e2e;
+  --bg-elevated: #1c2533;
+  --bg-hover: #243041;
+  --bg-active: #2d3a4d;
+
+  --border-primary: #1f2937;
+  --border-secondary: #151e2e;
+
+  --text-primary: #f0f6fc;
+  --text-secondary: #8b949e;
+  --text-tertiary: #6e7681;
+  --text-link: #58a6ff;
+
+  /* Accent Colors */
+  --accent-blue: #58a6ff;
+  --accent-green: #3fb950;
+  --accent-orange: #d29922;
+  --accent-red: #f85149;
+  --accent-purple: #bc8cff;
+  --accent-cyan: #39d2c0;
+  --accent-pink: #f778ba;
+
+  /* Syntax Colors */
+  --syn-key: #79c0ff;
+  --syn-string: #a5d6ff;
+  --syn-number: #79c0ff;
+  --syn-boolean: #ff7b72;
+  --syn-null: #8b949e;
+  --syn-bracket: #8b949e;
+  --syn-comma: #6e7681;
+
+  /* Tree Colors */
+  --tree-string: #a5d6ff;
+  --tree-number: #79c0ff;
+  --tree-boolean: #ff7b72;
+  --tree-null: #8b949e;
+  --tree-key: #d2a8ff;
+
+  /* Sizing */
+  --sidebar-width: 64px;
+  --header-height: 52px;
+  --toolbar-height: 42px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* ===== Layout ===== */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ===== Header ===== */
+.header {
+  height: var(--header-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 4px 12px rgba(88, 166, 255, 0.25);
+}
+
+.logo-text {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.header-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+.header-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ===== Main Content ===== */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  align-items: center;
+}
+
+.sidebar-separator {
+  width: 28px;
+  height: 1px;
+  background: var(--border-primary);
+  margin: 4px 0;
+}
+
+.sidebar-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.sidebar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-btn:active {
+  transform: scale(0.95);
+}
+
+.sidebar-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.tooltip {
+  position: absolute;
+  left: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: 1000;
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-btn:hover .tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(4px);
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  align-items: center;
+}
+
+/* ===== Panels ===== */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  overflow: hidden;
+}
+
+.panel-center {
+  flex: 1;
+  min-width: 350px;
+  border-right: 1px solid var(--border-primary);
+}
+
+.panel-right {
+  flex: 1;
+}
+
+@media (max-width: 900px) {
+  .panel-center { min-width: 300px; }
+  .panel-right { min-width: 280px; }
+  .header-btn span { display: none; }
+  .header-btn { padding: 7px; }
+}
+
+/* ===== Panel Header (Toolbar) ===== */
+.panel-header {
+  height: var(--toolbar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lang-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-title-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 6px rgba(63, 185, 80, 0.4);
+}
+
+.panel-title-dot.error {
+  background: var(--accent-red);
+  box-shadow: 0 0 6px rgba(248, 81, 73, 0.4);
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-btn:active {
+  transform: scale(0.95);
+}
+
+.toolbar-btn.active {
+  background: var(--bg-active);
+  color: var(--accent-blue);
+}
+
+.toolbar-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border-primary);
+  margin: 0 4px;
+}
+
+/* ===== View Tabs ===== */
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 3px;
+  border-radius: var(--radius-md);
+}
+
+.view-tab {
+  padding: 4px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.view-tab:hover {
+  color: var(--text-primary);
+}
+
+.view-tab.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.view-tab svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* ===== Resizer ===== */
+.resizer {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.resizer:hover, .resizer.active {
+  background: var(--accent-blue);
+}
+
+/* ===== Search Bar ===== */
+.search-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.search-bar.visible {
+  display: flex;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+/* ===== Error Bar ===== */
+.error-bar {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(248, 81, 73, 0.1);
+  border-bottom: 1px solid rgba(248, 81, 73, 0.3);
+  color: var(--accent-red);
+  font-size: 12px;
+}
+
+.error-bar.visible {
+  display: flex;
+}
+
+.error-bar svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ===== Code Editor ===== */
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-wrapper {
+  display: flex;
+  height: 100%;
+  overflow: auto;
+}
+
+.line-numbers {
+  padding: 12px 0;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
+  user-select: none;
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: right;
+}
+
+.line-number {
+  display: block;
+  padding: 0 12px 0 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--text-tertiary);
+  height: 22px;
+}
+
+.line-number.active {
+  color: var(--text-secondary);
+}
+
+.line-number.error {
+  color: var(--accent-red);
+  font-weight: 600;
+}
+
+.code-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#jsonInput {
+  width: 100%;
+  height: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 22px;
+  resize: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  caret-color: var(--accent-blue);
+}
+
+.drop-zone {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(88, 166, 255, 0.1);
+  border: 2px dashed var(--accent-blue);
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  backdrop-filter: blur(2px);
+}
+
+.drop-zone.visible {
+  display: flex;
+}
+
+.drop-zone-text {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ===== Tree View ===== */
+.tree-container {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 0;
+}
+
+.tree-node {
+  position: relative;
+}
+
+.tree-children {
+  overflow: hidden;
+  transition: height var(--transition-normal);
+}
+
+.tree-children.collapsed {
+  display: none;
+}
+
+.tree-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 2px 16px 2px 0;
+  min-height: 28px;
+  cursor: default;
+  transition: background var(--transition-fast);
+  border-radius: 0;
+}
+
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+
+.tree-row.selected {
+  background: rgba(88, 166, 255, 0.12);
+}
+
+.tree-indent {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.tree-indent-guide {
+  width: 24px;
+  height: 100%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tree-toggle {
+  width: 24px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.tree-toggle:hover {
+  color: var(--text-primary);
+}
+
+.tree-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform var(--transition-fast);
+}
+
+.tree-toggle.collapsed svg {
+  transform: rotate(-90deg);
+}
+
+.tree-toggle-placeholder {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.tree-content {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding: 3px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.tree-key {
+  color: var(--tree-key);
+  flex-shrink: 0;
+}
+
+.tree-colon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.tree-value {
+  word-break: break-all;
+}
+
+.tree-value.string { color: var(--tree-string); }
+.tree-value.number { color: var(--tree-number); }
+.tree-value.boolean { color: var(--tree-boolean); }
+.tree-value.null { color: var(--tree-null); }
+
+.tree-bracket {
+  color: var(--text-tertiary);
+}
+
+.tree-type-badge {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  background: var(--bg-elevated);
+  padding: 0 6px;
+  border-radius: 4px;
+  margin-left: 2px;
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px;
+  gap: 16px;
+}
+
+.empty-state svg {
+  width: 64px;
+  height: 64px;
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.empty-state p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ===== Table View ===== */
+.table-container {
+  flex: 1;
+  overflow: auto;
+  display: none;
+}
+
+.table-container.visible {
+  display: block;
+}
+
+.json-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.json-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  padding: 8px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-primary);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.json-table td {
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.json-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* ===== Graph View ===== */
+.graph-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: none;
+  background: #f8fafc;
+}
+
+.graph-container.visible {
+  display: block;
+}
+
+#graphCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#graphCanvas:active {
+  cursor: grabbing;
+}
+
+.graph-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.graph-toolbar .toolbar-btn {
+  color: #475569;
+  border-radius: 5px;
+}
+
+.graph-toolbar .toolbar-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.graph-hint {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #64748b;
+  font-size: 12px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transition: opacity var(--transition-fast);
+}
+
+.graph-container.graph-interacted .graph-hint {
+  opacity: 0;
+}
+
+#graphEmpty {
+  background: #f8fafc !important;
+  color: #64748b;
+}
+
+#graphEmpty svg {
+  color: #94a3b8;
+}
+
+/* ===== Path Breadcrumb ===== */
+.path-bar {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-tertiary);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.path-bar.visible {
+  display: flex;
+}
+
+.path-segment {
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all var(--transition-fast);
+}
+
+.path-segment:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.path-separator {
+  color: var(--text-tertiary);
+}
+
+/* ===== Status Bar ===== */
+.status-bar {
+  height: 28px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.status-left, .status-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.status-dot.valid { background: var(--accent-green); }
+.status-dot.invalid { background: var(--accent-red); }
+
+/* ===== Toast ===== */
+.toast-container {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-primary);
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.success { border-left: 3px solid var(--accent-green); }
+.toast.error { border-left: 3px solid var(--accent-red); }
+.toast.info { border-left: 3px solid var(--accent-blue); }
+
+.toast.fade-out {
+  opacity: 0;
+  transform: translateY(10px);
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-icon">{}</div>
+        <span class="logo-text">JSON4Editor</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="header-btn" onclick="importFile()" title="导入 JSON 文件">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>导入</span>
+      </button>
+      <button class="header-btn" onclick="exportFile()" title="导出 JSON 文件">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>导出</span>
+      </button>
+      <button class="header-btn" onclick="loadSample()" title="加载示例数据">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>示例</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-group">
+        <button class="sidebar-btn" onclick="importFile()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="tooltip">导入</span>
+        </button>
+        <button class="sidebar-btn" onclick="exportFile()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span class="tooltip">导出</span>
+        </button>
+      </div>
+      <div class="sidebar-separator"></div>
+      <div class="sidebar-group">
+        <button class="sidebar-btn" onclick="formatJSON()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+          <span class="tooltip">格式化</span>
+        </button>
+        <button class="sidebar-btn" onclick="minifyJSON()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+          <span class="tooltip">压缩</span>
+        </button>
+        <button class="sidebar-btn" onclick="copyJSON()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="tooltip">复制 JSON</span>
+        </button>
+        <button class="sidebar-btn" onclick="clearEditor()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="tooltip">清空</span>
+        </button>
+      </div>
+      <div class="sidebar-separator"></div>
+      <div class="sidebar-group">
+        <button class="sidebar-btn" onclick="loadSample()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span class="tooltip">示例</span>
+        </button>
+        <button class="sidebar-btn" onclick="toggleSearch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="tooltip">搜索</span>
+        </button>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="sidebar-separator"></div>
+        <button class="sidebar-btn" onclick="showToast('设置功能开发中', 'info')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="tooltip">设置</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Center Panel: Code Editor -->
+    <div class="panel panel-center" id="panelCenter">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="lang-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            JSON
+          </span>
+          <span class="panel-title-dot" id="validIndicator"></span>
+        </div>
+        <div class="panel-actions">
+          <button class="toolbar-btn" onclick="formatJSON()" title="格式化 (Ctrl+Shift+F)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+            格式化
+          </button>
+          <button class="toolbar-btn" onclick="minifyJSON()" title="压缩">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            压缩
+          </button>
+          <div class="toolbar-separator"></div>
+          <button class="toolbar-btn" onclick="toggleSearch()" title="搜索 (Ctrl+F)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            搜索
+          </button>
+        </div>
+      </div>
+      <div class="search-bar" id="searchBar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;color:var(--text-tertiary)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索 JSON..." oninput="handleSearch()">
+        <span class="search-count" id="searchCount"></span>
+        <button class="toolbar-btn" onclick="toggleSearch()" title="关闭搜索">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="error-bar" id="errorBar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <span id="errorMessage"></span>
+      </div>
+      <div class="editor-container" id="editorContainer">
+        <div class="editor-wrapper" id="editorWrapper">
+          <div class="line-numbers" id="lineNumbers"></div>
+          <div class="code-area">
+            <textarea id="jsonInput" spellcheck="false" placeholder="在此粘贴或输入 JSON...&#10;&#10;支持拖拽 .json 文件到此处"></textarea>
+          </div>
+        </div>
+        <div class="drop-zone" id="dropZone">
+          <span class="drop-zone-text">📄 释放文件以导入 JSON</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resizer -->
+    <div class="resizer" id="resizer"></div>
+
+    <!-- Right Panel: Tree / Table / Graph -->
+    <div class="panel panel-right" id="panelRight">
+      <div class="panel-header">
+        <div class="view-tabs">
+          <button class="view-tab active" data-view="tree" onclick="switchView('tree')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+            树形
+          </button>
+          <button class="view-tab" data-view="table" onclick="switchView('table')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            表格
+          </button>
+          <button class="view-tab" data-view="graph" onclick="switchView('graph')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            图形
+          </button>
+        </div>
+        <div class="panel-actions" id="rightPanelActions">
+          <button class="toolbar-btn" onclick="expandAll()" title="全部展开">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            展开
+          </button>
+          <button class="toolbar-btn" onclick="collapseAll()" title="全部折叠">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            折叠
+          </button>
+          <div class="toolbar-separator"></div>
+          <button class="toolbar-btn" onclick="copyPath()" title="复制当前路径">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            路径
+          </button>
+        </div>
+      </div>
+      <div class="path-bar" id="pathBar"></div>
+      <div class="tree-container" id="treeContainer">
+        <div class="empty-state" id="emptyState">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <p>在左侧输入 JSON 或拖拽文件<br>即可查看树形视图</p>
+        </div>
+      </div>
+      <div class="table-container" id="tableContainer"></div>
+      <div class="graph-container" id="graphContainer">
+        <canvas id="graphCanvas"></canvas>
+        <div class="graph-toolbar" id="graphToolbar">
+          <button class="toolbar-btn" onclick="zoomGraph(1.2)" title="放大">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="toolbar-btn" onclick="zoomGraph(0.8)" title="缩小">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="toolbar-btn" onclick="resetGraph()" title="重置视图">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+          <button class="toolbar-btn" onclick="exportGraphImage()" title="导出图形">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          </button>
+        </div>
+        <div class="graph-hint">拖拽平移 · 滚轮缩放 · 点击卡片或行高亮</div>
+        <div class="empty-state" id="graphEmpty" style="display:none;position:absolute;inset:0;background:var(--bg-primary);z-index:5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <p>输入有效 JSON 后<br>在此查看结构图形</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span class="status-item">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">就绪</span>
+      </span>
+      <span class="status-item" id="sizeInfo">0 B</span>
+    </div>
+    <div class="status-right">
+      <span class="status-item" id="nodeCount"></span>
+      <span class="status-item" id="depthInfo"></span>
+      <span class="status-item" id="cursorInfo">Ln 1, Col 1</span>
+      <span class="status-item">UTF-8</span>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept=".json,.txt" style="display:none" onchange="handleFileImport(event)">
+
+<script>
+// ===== State =====
+let parsedJSON = null;
+let currentPath = [];
+let currentView = 'tree';
+let isValid = false;
+let parseTimer = null;
+let currentStats = null;
+
+const MAX_INPUT_BYTES = 10 * 1024 * 1024;
+const MAX_RENDER_NODES = 20000;
+const MAX_RENDER_DEPTH = 100;
+
+// ===== Graph State =====
+let graphNodes = [];
+let graphEdges = [];
+let graphState = { x: 0, y: 0, scale: 1, isDragging: false, didDrag: false, lastX: 0, lastY: 0 };
+let selectedGraphNode = null;
+let selectedGraphRowKey = null;
+
+// ===== DOM References =====
+const jsonInput = document.getElementById('jsonInput');
+const lineNumbers = document.getElementById('lineNumbers');
+const treeContainer = document.getElementById('treeContainer');
+const tableContainer = document.getElementById('tableContainer');
+const graphContainer = document.getElementById('graphContainer');
+const graphCanvas = document.getElementById('graphCanvas');
+const graphCtx = graphCanvas.getContext('2d');
+const graphEmpty = document.getElementById('graphEmpty');
+const emptyState = document.getElementById('emptyState');
+const errorBar = document.getElementById('errorBar');
+const errorMessage = document.getElementById('errorMessage');
+const validIndicator = document.getElementById('validIndicator');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const sizeInfo = document.getElementById('sizeInfo');
+const nodeCount = document.getElementById('nodeCount');
+const depthInfo = document.getElementById('depthInfo');
+const cursorInfo = document.getElementById('cursorInfo');
+const pathBar = document.getElementById('pathBar');
+const searchBar = document.getElementById('searchBar');
+const searchInput = document.getElementById('searchInput');
+const searchCount = document.getElementById('searchCount');
+const editorWrapper = document.getElementById('editorWrapper');
+const dropZone = document.getElementById('dropZone');
+
+// ===== Initialize =====
+document.addEventListener('DOMContentLoaded', () => {
+  updateLineNumbers();
+  setupResizer();
+  setupDragDrop();
+  setupKeyboardShortcuts();
+  setupSyncScroll();
+  setupGraphInteractions();
+  updateCursorInfo();
+  jsonInput.focus();
+
+  if (location.hash === '#self-test') {
+    runSelfChecks();
+  }
+});
+
+// ===== Editor Input Handler =====
+jsonInput.addEventListener('input', () => {
+  clearTimeout(parseTimer);
+  parseTimer = setTimeout(() => {
+    parseAndRender();
+  }, 300);
+  updateLineNumbers();
+});
+
+jsonInput.addEventListener('scroll', () => {
+  lineNumbers.scrollTop = jsonInput.scrollTop;
+});
+
+jsonInput.addEventListener('keydown', (e) => {
+  // Tab support
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const start = jsonInput.selectionStart;
+    const end = jsonInput.selectionEnd;
+    jsonInput.value = jsonInput.value.substring(0, start) + '  ' + jsonInput.value.substring(end);
+    jsonInput.selectionStart = jsonInput.selectionEnd = start + 2;
+    jsonInput.dispatchEvent(new Event('input'));
+  }
+});
+
+jsonInput.addEventListener('keyup', updateCursorInfo);
+jsonInput.addEventListener('click', updateCursorInfo);
+
+// ===== Cursor Info =====
+function updateCursorInfo() {
+  const pos = jsonInput.selectionStart;
+  const text = jsonInput.value.substring(0, pos);
+  const lines = text.split('\n');
+  const line = lines.length;
+  const col = lines[lines.length - 1].length + 1;
+  cursorInfo.textContent = `Ln ${line}, Col ${col}`;
+}
+
+// ===== Line Numbers =====
+function updateLineNumbers() {
+  const lines = jsonInput.value.split('\n');
+  const count = lines.length;
+  let html = '';
+  for (let i = 1; i <= count; i++) {
+    html += `<span class="line-number">${i}</span>`;
+  }
+  lineNumbers.innerHTML = html;
+}
+
+// ===== Parse & Render =====
+function parseAndRender() {
+  const rawText = jsonInput.value;
+  const text = rawText.trim();
+
+  if (!text) {
+    parsedJSON = null;
+    isValid = false;
+    currentStats = null;
+    updateStatus('empty');
+    showEmptyState();
+    hideError();
+    return;
+  }
+
+  const inputBytes = new Blob([rawText]).size;
+  if (inputBytes > MAX_INPUT_BYTES) {
+    parsedJSON = null;
+    isValid = false;
+    currentStats = null;
+    updateStatus('invalid');
+    showError(`文件过大：最大支持 ${formatBytes(MAX_INPUT_BYTES)}，当前为 ${formatBytes(inputBytes)}`);
+    showEmptyState();
+    return;
+  }
+
+  try {
+    parsedJSON = JSON.parse(text);
+    isValid = true;
+    currentStats = getJSONStats(parsedJSON);
+    updateStatus('valid');
+    hideError();
+
+    if (!canRenderParsedJSON()) {
+      const limitMessage = getRenderLimitMessage();
+      showError(limitMessage);
+      showEmptyState('JSON 已通过校验，但数据规模超过本地安全渲染限制');
+      return;
+    }
+
+    if (currentView === 'tree') {
+      renderTree();
+    } else if (currentView === 'table') {
+      renderTable();
+    } else {
+      renderGraph();
+    }
+  } catch (err) {
+    parsedJSON = null;
+    isValid = false;
+    currentStats = null;
+    updateStatus('invalid');
+    showError(err.message);
+    showEmptyState();
+  }
+}
+
+// ===== Status Updates =====
+function updateStatus(state) {
+  const text = jsonInput.value;
+  const size = new Blob([text]).size;
+  sizeInfo.textContent = formatBytes(size);
+
+  if (state === 'empty') {
+    validIndicator.className = 'panel-title-dot';
+    statusDot.className = 'status-dot';
+    statusText.textContent = '就绪';
+    nodeCount.textContent = '';
+    depthInfo.textContent = '';
+  } else if (state === 'valid') {
+    validIndicator.className = 'panel-title-dot';
+    statusDot.className = 'status-dot valid';
+    statusText.textContent = 'JSON 有效';
+
+    const stats = currentStats;
+    nodeCount.textContent = stats.exceedsNodeLimit ? `超过 ${MAX_RENDER_NODES} 个节点` : `${stats.nodes} 个节点`;
+    depthInfo.textContent = stats.exceedsDepthLimit ? `深度超过 ${MAX_RENDER_DEPTH}` : `深度 ${stats.depth}`;
+  } else {
+    validIndicator.className = 'panel-title-dot error';
+    statusDot.className = 'status-dot invalid';
+    statusText.textContent = 'JSON 无效';
+    nodeCount.textContent = '';
+    depthInfo.textContent = '';
+  }
+}
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function getJSONStats(root) {
+  const stack = [{ value: root, depth: 0 }];
+  let nodes = 0;
+  let maxDepth = 0;
+
+  while (stack.length > 0) {
+    const { value, depth } = stack.pop();
+    nodes++;
+    maxDepth = Math.max(maxDepth, depth);
+
+    if (nodes > MAX_RENDER_NODES) {
+      return { nodes, depth: maxDepth, exceedsNodeLimit: true, exceedsDepthLimit: false };
+    }
+
+    if (value === null || typeof value !== 'object') continue;
+
+    const values = Array.isArray(value) ? value : Object.values(value);
+    if (values.length > 0 && depth >= MAX_RENDER_DEPTH) {
+      return { nodes, depth: depth + 1, exceedsNodeLimit: false, exceedsDepthLimit: true };
+    }
+
+    if (nodes + stack.length + values.length > MAX_RENDER_NODES) {
+      return { nodes: MAX_RENDER_NODES + 1, depth: maxDepth, exceedsNodeLimit: true, exceedsDepthLimit: false };
+    }
+
+    for (let i = values.length - 1; i >= 0; i--) {
+      stack.push({ value: values[i], depth: depth + 1 });
+    }
+  }
+
+  return { nodes, depth: maxDepth, exceedsNodeLimit: false, exceedsDepthLimit: false };
+}
+
+function canRenderParsedJSON() {
+  return isValid && currentStats && !currentStats.exceedsNodeLimit && !currentStats.exceedsDepthLimit;
+}
+
+function getRenderLimitMessage() {
+  if (currentStats?.exceedsDepthLimit) {
+    return `JSON 有效，但嵌套深度超过 ${MAX_RENDER_DEPTH}，为避免浏览器卡死已停止渲染`;
+  }
+  return `JSON 有效，但节点数超过 ${MAX_RENDER_NODES}，为避免浏览器卡死已停止渲染`;
+}
+
+// ===== Error Display =====
+function showError(msg) {
+  // Clear previous line errors
+  document.querySelectorAll('.line-number.error').forEach(el => el.classList.remove('error'));
+
+  const match = msg.match(/position (\d+)/);
+  if (match) {
+    const pos = parseInt(match[1]);
+    const textBefore = jsonInput.value.substring(0, pos);
+    const line = textBefore.split('\n').length;
+    const col = pos - textBefore.lastIndexOf('\n');
+    errorMessage.textContent = `第 ${line} 行, 第 ${col} 列: ${msg}`;
+
+    const lineEls = lineNumbers.querySelectorAll('.line-number');
+    if (lineEls[line - 1]) {
+      lineEls[line - 1].classList.add('error');
+    }
+  } else {
+    errorMessage.textContent = msg;
+  }
+  errorBar.classList.add('visible');
+}
+
+function hideError() {
+  errorBar.classList.remove('visible');
+  document.querySelectorAll('.line-number.error').forEach(el => el.classList.remove('error'));
+}
+
+// ===== Empty State =====
+function showEmptyState(message = '在左侧输入 JSON 或拖拽文件，即可查看树形视图') {
+  currentPath = [];
+  pathBar.classList.remove('visible');
+  treeContainer.innerHTML = '';
+  treeContainer.appendChild(emptyState);
+  emptyState.querySelector('p').textContent = message;
+  emptyState.style.display = 'flex';
+  tableContainer.innerHTML = '';
+  graphEmpty.style.display = 'flex';
+  graphNodes = [];
+  graphEdges = [];
+  selectedGraphNode = null;
+  drawGraph();
+}
+
+// ===== Tree View =====
+function renderTree() {
+  if (!canRenderParsedJSON()) {
+    showEmptyState();
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  treeContainer.innerHTML = '';
+  const treeEl = createTreeNode(parsedJSON, null, 0, true);
+  treeContainer.appendChild(treeEl);
+}
+
+function createTreeNode(value, key, depth, isLast = true) {
+  const node = document.createElement('div');
+  node.className = 'tree-node';
+
+  const type = getType(value);
+  const isExpandable = type === 'object' || type === 'array';
+
+  const row = document.createElement('div');
+  row.className = 'tree-row';
+  row.dataset.depth = depth;
+  row.dataset.key = key !== null ? String(key) : '$';
+  row.addEventListener('click', (e) => {
+    if (!e.target.closest('.tree-toggle')) {
+      selectTreeRow(row, key, depth);
+    }
+  });
+
+  for (let i = 0; i < depth; i++) {
+    const indent = document.createElement('span');
+    indent.className = 'tree-indent-guide';
+    row.appendChild(indent);
+  }
+
+  if (isExpandable) {
+    const toggle = document.createElement('button');
+    toggle.className = 'tree-toggle';
+    toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNode(toggle, childrenEl);
+    });
+    row.appendChild(toggle);
+  } else {
+    const ph = document.createElement('span');
+    ph.className = 'tree-toggle-placeholder';
+    row.appendChild(ph);
+  }
+
+  const content = document.createElement('span');
+  content.className = 'tree-content';
+
+  if (key !== null && key !== undefined) {
+    const keyEl = document.createElement('span');
+    keyEl.className = 'tree-key';
+    keyEl.textContent = typeof key === 'number' ? `[${key}]` : `"${key}"`;
+    content.appendChild(keyEl);
+
+    const colon = document.createElement('span');
+    colon.className = 'tree-colon';
+    colon.textContent = ': ';
+    content.appendChild(colon);
+  }
+
+  if (isExpandable) {
+    const bracket = document.createElement('span');
+    bracket.className = 'tree-bracket';
+    const entries = type === 'array' ? value : Object.keys(value);
+    bracket.textContent = type === 'array' ? `[` : `{`;
+    content.appendChild(bracket);
+
+    const badge = document.createElement('span');
+    badge.className = 'tree-type-badge';
+    badge.textContent = ` ${entries.length} ${type === 'array' ? 'items' : 'keys'}`;
+    content.appendChild(badge);
+  } else {
+    const valEl = document.createElement('span');
+    valEl.className = `tree-value ${type}`;
+    valEl.textContent = formatValue(value, type);
+    content.appendChild(valEl);
+  }
+
+  row.appendChild(content);
+  node.appendChild(row);
+
+  let childrenEl = null;
+  if (isExpandable) {
+    childrenEl = document.createElement('div');
+    childrenEl.className = 'tree-children';
+
+    const entries = type === 'array'
+      ? value.map((v, i) => [i, v])
+      : Object.entries(value);
+
+    entries.forEach(([k, v], idx) => {
+      const childNode = createTreeNode(v, k, depth + 1, idx === entries.length - 1);
+      childrenEl.appendChild(childNode);
+    });
+
+    const closingRow = document.createElement('div');
+    closingRow.className = 'tree-row';
+    for (let i = 0; i < depth; i++) {
+      const indent = document.createElement('span');
+      indent.className = 'tree-indent-guide';
+      closingRow.appendChild(indent);
+    }
+    const closePh = document.createElement('span');
+    closePh.className = 'tree-toggle-placeholder';
+    closingRow.appendChild(closePh);
+    const closeBracket = document.createElement('span');
+    closeBracket.className = 'tree-content';
+    closeBracket.innerHTML = `<span class="tree-bracket">${type === 'array' ? ']' : '}'}</span>`;
+    closingRow.appendChild(closeBracket);
+    childrenEl.appendChild(closingRow);
+
+    node.appendChild(childrenEl);
+
+    if (depth >= 3) {
+      toggleNode(row.querySelector('.tree-toggle'), childrenEl);
+    }
+  }
+
+  return node;
+}
+
+function toggleNode(toggleBtn, childrenEl) {
+  if (!toggleBtn || !childrenEl) return;
+  const isCollapsed = childrenEl.classList.contains('collapsed');
+  if (isCollapsed) {
+    childrenEl.classList.remove('collapsed');
+    toggleBtn.classList.remove('collapsed');
+  } else {
+    childrenEl.classList.add('collapsed');
+    toggleBtn.classList.add('collapsed');
+  }
+}
+
+function selectTreeRow(row, key, depth) {
+  document.querySelectorAll('.tree-row.selected').forEach(el => el.classList.remove('selected'));
+  row.classList.add('selected');
+
+  const path = [];
+  let el = row.closest('.tree-node');
+  while (el) {
+    const rowEl = el.querySelector(':scope > .tree-row');
+    if (rowEl && rowEl.dataset.key !== '$') path.unshift(rowEl.dataset.key);
+    el = el.parentElement?.closest('.tree-node');
+  }
+
+  currentPath = path;
+  updatePathBar(path);
+
+  if (currentView === 'graph') {
+    syncTreeSelectionToGraph(path);
+  }
+}
+
+function syncTreeSelectionToGraph(path) {
+  const target = findGraphTargetByPath(path);
+  selectedGraphNode = target && path.length ? target.node : null;
+  selectedGraphRowKey = target && path.length ? target.rowKey : null;
+  drawGraph();
+}
+
+function updatePathBar(path) {
+  if (path.length === 0) {
+    pathBar.classList.remove('visible');
+    return;
+  }
+
+  pathBar.classList.add('visible');
+  pathBar.replaceChildren();
+  const root = document.createElement('span');
+  root.className = 'path-segment';
+  root.textContent = '$';
+  root.onclick = navigateToRoot;
+  pathBar.appendChild(root);
+
+  let parent = parsedJSON;
+  path.forEach(seg => {
+    const segment = document.createElement('span');
+    segment.className = 'path-segment';
+    segment.textContent = formatPathSegment(parent, seg);
+    pathBar.appendChild(segment);
+    parent = parent !== null && typeof parent === 'object' ? parent[seg] : undefined;
+  });
+}
+
+function navigateToRoot() {
+  currentPath = [];
+  pathBar.classList.remove('visible');
+  document.querySelectorAll('.tree-row.selected').forEach(el => el.classList.remove('selected'));
+  selectedGraphNode = null;
+  selectedGraphRowKey = null;
+  if (currentView === 'graph') drawGraph();
+}
+
+// ===== Table View =====
+function renderTable() {
+  if (!canRenderParsedJSON()) {
+    tableContainer.innerHTML = '<div class="empty-state" style="display:flex"><p>无可显示的表格数据</p></div>';
+    return;
+  }
+
+  if (!Array.isArray(parsedJSON)) {
+    tableContainer.innerHTML = '<div class="empty-state" style="display:flex"><p>表格视图仅支持对象数组<br>请切换到树形视图查看</p></div>';
+    return;
+  }
+
+  const allKeys = new Set();
+  parsedJSON.forEach(item => {
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      Object.keys(item).forEach(k => allKeys.add(k));
+    }
+  });
+
+  if (allKeys.size === 0) {
+    tableContainer.innerHTML = '<div class="empty-state" style="display:flex"><p>数组中无对象，无法生成表格</p></div>';
+    return;
+  }
+
+  const keys = Array.from(allKeys);
+  let html = '<table class="json-table"><thead><tr>';
+  html += '<th>#</th>';
+  keys.forEach(k => { html += `<th>${escapeHtml(k)}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  parsedJSON.forEach((item, idx) => {
+    html += '<tr>';
+    html += `<td style="color:var(--text-tertiary)">${idx}</td>`;
+    keys.forEach(k => {
+      const val = item && typeof item === 'object' ? item[k] : undefined;
+      html += `<td>${formatTableCell(val)}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  tableContainer.innerHTML = html;
+}
+
+function formatTableCell(val) {
+  if (val === undefined) return '<span style="color:var(--text-tertiary)">-</span>';
+  if (val === null) return '<span style="color:var(--tree-null);font-style:italic">null</span>';
+  if (typeof val === 'boolean') return `<span style="color:var(--tree-boolean)">${val}</span>`;
+  if (typeof val === 'number') return `<span style="color:var(--tree-number)">${val}</span>`;
+  if (typeof val === 'string') return `<span style="color:var(--tree-string)">"${escapeHtml(val.length > 80 ? val.substring(0, 80) + '...' : val)}"</span>`;
+  if (Array.isArray(val)) return `<span style="color:var(--text-tertiary)">[${val.length}]</span>`;
+  if (typeof val === 'object') return `<span style="color:var(--text-tertiary)">{${Object.keys(val).length}}</span>`;
+  return escapeHtml(String(val));
+}
+
+// ===== View Switching =====
+function switchView(view) {
+  currentView = view;
+
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+
+  treeContainer.style.display = view === 'tree' ? '' : 'none';
+  tableContainer.classList.toggle('visible', view === 'table');
+  graphContainer.classList.toggle('visible', view === 'graph');
+
+  updateRightPanelActions(view);
+
+  if (view === 'tree' && isValid) renderTree();
+  if (view === 'table' && isValid) renderTable();
+  if (view === 'graph') renderGraph();
+}
+
+function updateRightPanelActions(view) {
+  const actions = document.getElementById('rightPanelActions');
+  if (view === 'graph') {
+    actions.style.display = 'none';
+    actions.innerHTML = `
+      <button class="toolbar-btn" onclick="zoomGraph(1.2)" title="放大">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        放大
+      </button>
+      <button class="toolbar-btn" onclick="zoomGraph(0.8)" title="缩小">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        缩小
+      </button>
+      <button class="toolbar-btn" onclick="resetGraph()" title="重置视图">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+        重置
+      </button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" onclick="copyPath()" title="复制当前路径">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        路径
+      </button>
+    `;
+  } else {
+    actions.style.display = '';
+    actions.innerHTML = `
+      <button class="toolbar-btn" onclick="expandAll()" title="全部展开">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        展开
+      </button>
+      <button class="toolbar-btn" onclick="collapseAll()" title="全部折叠">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        折叠
+      </button>
+      <div class="toolbar-separator"></div>
+      <button class="toolbar-btn" onclick="copyPath()" title="复制当前路径">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        路径
+      </button>
+    `;
+  }
+}
+
+// ===== Expand / Collapse All =====
+function expandAll() {
+  document.querySelectorAll('.tree-children.collapsed').forEach(el => {
+    el.classList.remove('collapsed');
+  });
+  document.querySelectorAll('.tree-toggle.collapsed').forEach(el => {
+    el.classList.remove('collapsed');
+  });
+  showToast('已全部展开', 'info');
+}
+
+function collapseAll() {
+  document.querySelectorAll('.tree-children').forEach(el => {
+    el.classList.add('collapsed');
+  });
+  document.querySelectorAll('.tree-toggle').forEach(el => {
+    el.classList.add('collapsed');
+  });
+  showToast('已全部折叠', 'info');
+}
+
+// ===== Toolbar Actions =====
+function formatJSON() {
+  if (!isValid) {
+    showToast('请先输入有效的 JSON', 'error');
+    return;
+  }
+  jsonInput.value = JSON.stringify(parsedJSON, null, 2);
+  jsonInput.dispatchEvent(new Event('input'));
+  showToast('✨ 格式化完成', 'success');
+}
+
+function minifyJSON() {
+  if (!isValid) {
+    showToast('请先输入有效的 JSON', 'error');
+    return;
+  }
+  jsonInput.value = JSON.stringify(parsedJSON);
+  jsonInput.dispatchEvent(new Event('input'));
+  showToast('🗜️ 压缩完成', 'success');
+}
+
+function copyJSON() {
+  const text = jsonInput.value;
+  if (!text) {
+    showToast('没有内容可复制', 'error');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 已复制到剪贴板', 'success');
+  }).catch(() => {
+    jsonInput.select();
+    document.execCommand('copy');
+    showToast('📋 已复制到剪贴板', 'success');
+  });
+}
+
+function copyPath() {
+  if (currentPath.length === 0) {
+    showToast('请先在树形或图形视图中选择一个节点', 'info');
+    return;
+  }
+  const pathStr = formatJSONPath(currentPath);
+  navigator.clipboard.writeText(pathStr).then(() => {
+    showToast(`📋 路径已复制: ${pathStr}`, 'success');
+  });
+}
+
+function clearEditor() {
+  jsonInput.value = '';
+  jsonInput.dispatchEvent(new Event('input'));
+  currentPath = [];
+  pathBar.classList.remove('visible');
+  showToast('🗑️ 已清空', 'info');
+}
+
+// ===== Search =====
+function toggleSearch() {
+  const isVisible = searchBar.classList.contains('visible');
+  if (isVisible) {
+    searchBar.classList.remove('visible');
+    searchInput.value = '';
+    searchCount.textContent = '';
+  } else {
+    searchBar.classList.add('visible');
+    searchInput.focus();
+  }
+}
+
+function handleSearch() {
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) {
+    searchCount.textContent = '';
+    return;
+  }
+
+  const text = jsonInput.value.toLowerCase();
+  let count = 0;
+  let pos = 0;
+  while ((pos = text.indexOf(query, pos)) !== -1) {
+    count++;
+    pos += query.length;
+  }
+  searchCount.textContent = `${count} 个匹配`;
+}
+
+// ===== File Operations =====
+function importFile() {
+  document.getElementById('fileInput').click();
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  readFile(file);
+  event.target.value = '';
+}
+
+function readFile(file) {
+  if (file.size > MAX_INPUT_BYTES) {
+    showToast(`文件过大，最大支持 ${formatBytes(MAX_INPUT_BYTES)}`, 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    jsonInput.value = e.target.result;
+    jsonInput.dispatchEvent(new Event('input'));
+    showToast(`📂 已导入: ${file.name}`, 'success');
+  };
+  reader.onerror = () => {
+    showToast('文件读取失败', 'error');
+  };
+  reader.readAsText(file);
+}
+
+function exportFile() {
+  if (!jsonInput.value.trim()) {
+    showToast('没有内容可导出', 'error');
+    return;
+  }
+
+  const blob = new Blob([jsonInput.value], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `data_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 已导出文件', 'success');
+}
+
+// ===== Sample Data =====
+function loadSample() {
+  const sample = {
+    "name": "JSON4Editor",
+    "version": "1.1.0",
+    "description": "一个本地高性能 JSON 编辑器",
+    "features": [
+      "树形视图",
+      "表格视图",
+      "图形视图",
+      "格式化与压缩",
+      "文件导入导出",
+      "路径复制",
+      "搜索功能"
+    ],
+    "author": {
+      "name": "本地用户",
+      "note": "示例数据，不包含真实个人信息"
+    },
+    "config": {
+      "theme": "dark",
+      "fontSize": 14,
+      "tabSize": 2,
+      "wordWrap": false,
+      "autoFormat": true
+    },
+    "dependencies": {
+      "core": "^2.0.0",
+      "parser": "^1.5.3",
+      "renderer": "^3.1.0"
+    },
+    "users": [
+      { "id": 1, "name": "Alice", "role": "admin", "active": true },
+      { "id": 2, "name": "Bob", "role": "editor", "active": true },
+      { "id": 3, "name": "Charlie", "role": "viewer", "active": false },
+      { "id": 4, "name": "Diana", "role": "editor", "active": true }
+    ],
+    "stats": {
+      "totalUsers": 4,
+      "activeUsers": 3,
+      "lastUpdated": "2026-08-21T12:00:00Z",
+      "uptime": 99.97,
+      "regions": ["Asia", "Europe", "America"]
+    },
+    "metadata": null,
+    "isPublic": true,
+    "rating": 4.8
+  };
+
+  jsonInput.value = JSON.stringify(sample, null, 2);
+  jsonInput.dispatchEvent(new Event('input'));
+  showToast('📄 已加载示例数据', 'success');
+}
+
+// ===== Drag & Drop =====
+function setupDragDrop() {
+  const container = document.getElementById('editorContainer');
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    container.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.add('visible');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(evt => {
+    container.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('visible');
+    });
+  });
+
+  container.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      readFile(files[0]);
+    }
+  });
+}
+
+// ===== Resizer =====
+function setupResizer() {
+  const resizer = document.getElementById('resizer');
+  const centerPanel = document.getElementById('panelCenter');
+  const rightPanel = document.getElementById('panelRight');
+
+  let isResizing = false;
+  let startX, startCenterWidth;
+
+  resizer.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    startX = e.clientX;
+    startCenterWidth = centerPanel.offsetWidth;
+    resizer.classList.add('active');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const dx = e.clientX - startX;
+    const newWidth = startCenterWidth + dx;
+    const containerWidth = centerPanel.parentElement.offsetWidth - 64; // minus sidebar
+
+    if (newWidth >= 300 && newWidth <= containerWidth - 300) {
+      centerPanel.style.flex = 'none';
+      centerPanel.style.width = newWidth + 'px';
+      rightPanel.style.flex = '1';
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      resizer.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+}
+
+// ===== Keyboard Shortcuts =====
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+      e.preventDefault();
+      formatJSON();
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'f') {
+      e.preventDefault();
+      toggleSearch();
+    }
+    if (e.key === 'Escape') {
+      if (searchBar.classList.contains('visible')) {
+        toggleSearch();
+      }
+    }
+  });
+}
+
+// ===== Sync Scroll =====
+function setupSyncScroll() {
+  jsonInput.addEventListener('scroll', () => {
+    lineNumbers.scrollTop = jsonInput.scrollTop;
+  });
+}
+
+// ===== Graph View =====
+function renderGraph() {
+  if (!canRenderParsedJSON()) {
+    graphEmpty.style.display = 'flex';
+    graphNodes = [];
+    graphEdges = [];
+    selectedGraphNode = null;
+    selectedGraphRowKey = null;
+    drawGraph();
+    return;
+  }
+  graphEmpty.style.display = 'none';
+  graphContainer.classList.remove('graph-interacted');
+  const layout = layoutGraph(parsedJSON);
+  graphNodes = layout.nodes;
+  graphEdges = layout.edges;
+  if (layout.truncated) showToast('Graph 仅显示前 200 个节点，请切换树形视图查看完整数据', 'info');
+  selectedGraphNode = null;
+  selectedGraphRowKey = null;
+  resetGraphView();
+  drawGraph();
+  if (currentPath.length) syncTreeSelectionToGraph(currentPath);
+}
+
+function resetGraphView() {
+  graphState.x = 0;
+  graphState.y = 0;
+  graphState.scale = 1;
+  graphState.didDrag = false;
+}
+
+function resetGraph() {
+  resetGraphView();
+  drawGraph();
+}
+
+function zoomGraph(factor) {
+  graphState.scale = Math.max(0.1, Math.min(3, graphState.scale * factor));
+  graphContainer.classList.add('graph-interacted');
+  drawGraph();
+}
+
+function layoutGraph(root) {
+  const nodes = [];
+  const edges = [];
+  let nodeId = 0;
+  let truncated = false;
+  const maxCards = 200;
+  const maxRows = 16;
+
+  function isTableArray(value) {
+    return Array.isArray(value) && value.length > 0 &&
+      value.every(item => item && typeof item === 'object' && !Array.isArray(item));
+  }
+
+  function buildCard(value, key, depth, parentId, path) {
+    // ponytail: cap Graph cards/rows at 200/16; tree view remains the complete view.
+    if (nodes.length >= maxCards) {
+      truncated = true;
+      return null;
+    }
+
+    const type = getType(value);
+    const node = {
+      id: nodeId++,
+      key: key !== null ? String(key) : '$',
+      value,
+      type,
+      depth,
+      path,
+      x: 0,
+      y: 0,
+      width: type === 'array' && isTableArray(value) ? 300 : 276,
+      height: 58,
+      parentId,
+      rows: [],
+      table: null
+    };
+    nodes.push(node);
+
+    if (type === 'object' || type === 'array') {
+      createGraphRows(value, node);
+      const rowCount = node.table ? node.table.rows.length + 1 : node.rows.length;
+      node.height = Math.max(58, 20 + rowCount * 24);
+    }
+    return node;
+  }
+
+  function createGraphRows(value, node) {
+    if (node.type === 'array' && isTableArray(value)) {
+      const columnSet = new Set();
+      value.slice(0, maxRows).forEach(item => Object.keys(item).forEach(column => columnSet.add(column)));
+      node.table = {
+        columns: Array.from(columnSet).slice(0, 6),
+        rows: value.slice(0, maxRows).map((item, index) => ({
+          key: String(index),
+          value: item,
+          type: 'object'
+        }))
+      };
+      node.rows = node.table.rows;
+      if (value.length > maxRows) {
+        node.table.more = value.length - maxRows;
+        truncated = true;
+      }
+      return;
+    }
+
+    const entries = node.type === 'array'
+      ? value.map((item, index) => [index, item])
+      : Object.entries(value);
+    const visibleEntries = entries.slice(0, maxRows);
+    node.rows = visibleEntries.map(entry => ({
+      key: String(entry[0]),
+      value: entry[1],
+      type: getType(entry[1]),
+      childId: null
+    }));
+    if (entries.length > maxRows) {
+      node.rows.push({ kind: 'more', key: '', value: entries.length - maxRows });
+      truncated = true;
+    }
+    node.rows.forEach(row => {
+      if (row.kind === 'more' || (row.type !== 'object' && row.type !== 'array')) return;
+      const child = buildCard(row.value, row.key, node.depth + 1, node.id, node.path.concat(row.key));
+      if (child) {
+        row.childId = child.id;
+        edges.push({ from: node.id, to: child.id, key: row.key });
+      }
+    });
+  }
+
+  buildCard(root, null, 0, null, []);
+
+  const levels = [];
+  nodes.forEach(n => {
+    if (!levels[n.depth]) levels[n.depth] = [];
+    levels[n.depth].push(n);
+  });
+
+  levels.forEach((levelNodes, depth) => {
+    if (!levelNodes) return;
+    let startY = 58;
+    levelNodes.forEach(n => {
+      n.x = depth * 360 + 32;
+      n.y = startY;
+      startY += n.height + 54;
+    });
+  });
+
+  return { nodes, edges, truncated };
+}
+
+function getGraphValueText(value, type) {
+  if (type === 'object') return '{' + Object.keys(value).length + '}';
+  if (type === 'array') return '[' + value.length + ']';
+  if (type === 'null') return 'null';
+  const text = String(value);
+  return text.length > 28 ? text.slice(0, 26) + '…' : text;
+}
+
+function getGraphValueColor(type) {
+  switch (type) {
+    case 'number': return '#059669';
+    case 'boolean': return '#2563eb';
+    case 'null': return '#2563eb';
+    case 'string': return '#2563eb';
+    default: return '#64748b';
+  }
+}
+
+function graphRowY(node, index) {
+  return node.y + 32 + index * 24;
+}
+
+function drawGraphGrid(rect) {
+  graphCtx.fillStyle = '#f8fafc';
+  graphCtx.fillRect(0, 0, rect.width, rect.height);
+  graphCtx.strokeStyle = '#e2e8f0';
+  graphCtx.lineWidth = 1;
+  for (let x = 0; x <= rect.width; x += 32) {
+    graphCtx.beginPath();
+    graphCtx.moveTo(x + 0.5, 0);
+    graphCtx.lineTo(x + 0.5, rect.height);
+    graphCtx.stroke();
+  }
+  for (let y = 0; y <= rect.height; y += 32) {
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, y + 0.5);
+    graphCtx.lineTo(rect.width, y + 0.5);
+    graphCtx.stroke();
+  }
+}
+
+function drawGraphText(text, x, y, maxWidth, align, color) {
+  graphCtx.save();
+  graphCtx.textAlign = align || 'left';
+  graphCtx.fillStyle = color;
+  while (text.length > 1 && graphCtx.measureText(text + '…').width > maxWidth) {
+    text = text.slice(0, -1);
+  }
+  if (graphCtx.measureText(text).width > maxWidth) text += '…';
+  graphCtx.fillText(text, x, y);
+  graphCtx.restore();
+}
+
+function drawGraphTable(node) {
+  const columns = ['#'].concat(node.table.columns);
+  const columnWidth = (node.width - 20) / columns.length;
+  const headerY = node.y + 22;
+  graphCtx.font = '12px Inter, Arial, sans-serif';
+  graphCtx.textBaseline = 'middle';
+  columns.forEach((column, index) => {
+    const x = node.x + 10 + index * columnWidth;
+    graphCtx.fillStyle = '#64748b';
+    graphCtx.textAlign = index === 0 ? 'center' : 'left';
+    graphCtx.fillText(column, index === 0 ? x + columnWidth / 2 : x + 8, headerY);
+  });
+  graphCtx.strokeStyle = '#dbe4ee';
+  graphCtx.beginPath();
+  graphCtx.moveTo(node.x + 10, node.y + 34);
+  graphCtx.lineTo(node.x + node.width - 10, node.y + 34);
+  graphCtx.stroke();
+
+  node.table.rows.forEach((row, rowIndex) => {
+    const y = node.y + 46 + rowIndex * 24;
+    if (selectedGraphNode && selectedGraphNode.id === node.id && selectedGraphRowKey === row.key) {
+      graphCtx.fillStyle = 'rgba(79, 70, 229, 0.10)';
+      graphCtx.fillRect(node.x + 1, y - 12, node.width - 2, 24);
+    }
+    graphCtx.strokeStyle = '#edf2f7';
+    graphCtx.beginPath();
+    graphCtx.moveTo(node.x + 10, y + 12);
+    graphCtx.lineTo(node.x + node.width - 10, y + 12);
+    graphCtx.stroke();
+    graphCtx.fillStyle = '#dc2626';
+    graphCtx.textAlign = 'center';
+    graphCtx.fillText(row.key, node.x + 10 + columnWidth / 2, y);
+    node.table.columns.forEach((column, columnIndex) => {
+      const value = row.value[column];
+      drawGraphText(
+        getGraphValueText(value, getType(value)),
+        node.x + 10 + (columnIndex + 1) * columnWidth + columnWidth - 8,
+        y,
+        columnWidth - 16,
+        'right',
+        getGraphValueColor(getType(value))
+      );
+    });
+  });
+  if (node.table.more) {
+    graphCtx.fillStyle = '#94a3b8';
+    graphCtx.textAlign = 'left';
+    graphCtx.fillText('… 还有 ' + node.table.more + ' 行', node.x + 14, node.y + node.height - 12);
+  }
+}
+
+function drawGraphCard(node) {
+  const selected = selectedGraphNode && selectedGraphNode.id === node.id;
+  graphCtx.save();
+  graphCtx.shadowColor = 'rgba(15, 23, 42, 0.10)';
+  graphCtx.shadowBlur = 8;
+  graphCtx.shadowOffsetY = 2;
+  graphCtx.fillStyle = '#ffffff';
+  graphCtx.strokeStyle = selected ? '#4f46e5' : '#b8c8d9';
+  graphCtx.lineWidth = selected ? 2 : 1;
+  roundRect(graphCtx, node.x, node.y, node.width, node.height, 2);
+  graphCtx.fill();
+  graphCtx.stroke();
+  graphCtx.shadowColor = 'transparent';
+
+  graphCtx.font = '12px Inter, Arial, sans-serif';
+  graphCtx.textBaseline = 'middle';
+  graphCtx.fillStyle = '#64748b';
+  graphCtx.textAlign = 'left';
+  graphCtx.fillText(node.key || '$', node.x + 14, node.y - 12);
+
+  if (node.table) {
+    drawGraphTable(node);
+  } else {
+    node.rows.forEach((row, index) => {
+      const y = graphRowY(node, index);
+      if (selected && selectedGraphRowKey === row.key && row.kind !== 'more') {
+        graphCtx.fillStyle = 'rgba(79, 70, 229, 0.10)';
+        graphCtx.fillRect(node.x + 1, y - 12, node.width - 2, 24);
+      }
+      if (index > 0) {
+        graphCtx.strokeStyle = '#edf2f7';
+        graphCtx.lineWidth = 1;
+        graphCtx.beginPath();
+        graphCtx.moveTo(node.x + 10, y - 12);
+        graphCtx.lineTo(node.x + node.width - 10, y - 12);
+        graphCtx.stroke();
+      }
+      graphCtx.font = '12px Inter, Arial, sans-serif';
+      if (row.kind === 'more') {
+        drawGraphText('… 还有 ' + row.value + ' 项', node.x + 14, y, node.width - 28, 'left', '#94a3b8');
+        return;
+      }
+      drawGraphText(row.key, node.x + 14, y, node.width * 0.58, 'left', '#dc2626');
+      drawGraphText(
+        getGraphValueText(row.value, row.type),
+        node.x + node.width - 14,
+        y,
+        node.width * 0.34,
+        'right',
+        row.childId ? '#64748b' : getGraphValueColor(row.type)
+      );
+    });
+  }
+  graphCtx.restore();
+}
+
+function drawGraphEdges() {
+  graphCtx.strokeStyle = '#a8c7e2';
+  graphCtx.lineWidth = 1.2;
+  graphEdges.forEach(edge => {
+    const from = graphNodes.find(node => node.id === edge.from);
+    const to = graphNodes.find(node => node.id === edge.to);
+    if (!from || !to) return;
+    const rowIndex = from.rows.findIndex(row => row.key === edge.key);
+    const sourceY = from.table
+      ? from.y + 46 + Math.max(rowIndex, 0) * 24
+      : graphRowY(from, Math.max(rowIndex, 0));
+    const targetY = to.y + Math.min(to.height / 2, 30);
+    const sourceX = from.x + from.width;
+    const targetX = to.x;
+    const bend = Math.max(70, (targetX - sourceX) * 0.45);
+    graphCtx.beginPath();
+    graphCtx.moveTo(sourceX, sourceY);
+    graphCtx.bezierCurveTo(sourceX + bend, sourceY, targetX - bend, targetY, targetX, targetY);
+    graphCtx.stroke();
+  });
+}
+
+function drawGraphMinimap(rect) {
+  if (!graphNodes.length) return;
+  const box = { width: 184, height: 112, x: rect.width - 200, y: rect.height - 128 };
+  const worldWidth = Math.max.apply(null, graphNodes.map(node => node.x + node.width)) + 40;
+  const worldHeight = Math.max.apply(null, graphNodes.map(node => node.y + node.height)) + 40;
+  const scale = Math.min((box.width - 16) / worldWidth, (box.height - 16) / worldHeight);
+  graphCtx.save();
+  graphCtx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+  graphCtx.strokeStyle = '#b8c8d9';
+  graphCtx.lineWidth = 1;
+  roundRect(graphCtx, box.x, box.y, box.width, box.height, 8);
+  graphCtx.fill();
+  graphCtx.stroke();
+  graphNodes.forEach(node => {
+    graphCtx.fillStyle = selectedGraphNode && selectedGraphNode.id === node.id ? '#4f46e5' : '#94a3b8';
+    graphCtx.fillRect(box.x + 8 + node.x * scale, box.y + 8 + node.y * scale, Math.max(3, node.width * scale), Math.max(2, node.height * scale));
+  });
+  graphCtx.restore();
+}
+
+function drawGraph() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = graphCanvas.getBoundingClientRect();
+  graphCanvas.width = rect.width * dpr;
+  graphCanvas.height = rect.height * dpr;
+  graphCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawGraphGrid(rect);
+  if (!graphNodes.length) return;
+
+  graphCtx.save();
+  graphCtx.translate(32 + graphState.x, 32 + graphState.y);
+  graphCtx.scale(graphState.scale, graphState.scale);
+  drawGraphEdges();
+  graphNodes.forEach(drawGraphCard);
+  graphCtx.restore();
+  drawGraphMinimap(rect);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function setupGraphInteractions() {
+  graphCanvas.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    graphState.isDragging = true;
+    graphState.didDrag = false;
+    graphState.lastX = e.clientX;
+    graphState.lastY = e.clientY;
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!graphState.isDragging) return;
+    const dx = e.clientX - graphState.lastX;
+    const dy = e.clientY - graphState.lastY;
+    if (Math.abs(dx) + Math.abs(dy) > 2) graphState.didDrag = true;
+    graphState.x += dx;
+    graphState.y += dy;
+    graphState.lastX = e.clientX;
+    graphState.lastY = e.clientY;
+    graphContainer.classList.add('graph-interacted');
+    requestAnimationFrame(drawGraph);
+  });
+
+  window.addEventListener('mouseup', () => {
+    graphState.isDragging = false;
+  });
+
+  graphCanvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    graphState.scale = Math.max(0.1, Math.min(3, graphState.scale * delta));
+    graphContainer.classList.add('graph-interacted');
+    drawGraph();
+  }, { passive: false });
+
+  graphCanvas.addEventListener('click', e => {
+    if (graphState.didDrag) {
+      graphState.didDrag = false;
+      return;
+    }
+    const rect = graphCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left - 32 - graphState.x) / graphState.scale;
+    const y = (e.clientY - rect.top - 32 - graphState.y) / graphState.scale;
+    const clicked = getGraphHit(x, y);
+    if (clicked) {
+      selectedGraphNode = clicked.node;
+      selectedGraphRowKey = clicked.rowKey;
+      currentPath = clicked.path;
+      updatePathBar(currentPath);
+      drawGraph();
+      syncGraphSelectionToTree();
+    } else {
+      selectedGraphNode = null;
+      selectedGraphRowKey = null;
+      drawGraph();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (currentView === 'graph') drawGraph();
+  });
+}
+
+function getGraphHit(x, y) {
+  for (let index = graphNodes.length - 1; index >= 0; index--) {
+    const node = graphNodes[index];
+    if (x < node.x || x > node.x + node.width || y < node.y || y > node.y + node.height) continue;
+    if (node.table) {
+      const rowIndex = Math.floor((y - node.y - 34) / 24);
+      if (rowIndex >= 0 && rowIndex < node.table.rows.length) {
+        const row = node.table.rows[rowIndex];
+        return { node, rowKey: row.key, path: node.path.concat(row.key) };
+      }
+    } else {
+      const rowIndex = Math.floor((y - node.y - 20) / 24);
+      if (rowIndex >= 0 && rowIndex < node.rows.length) {
+        const row = node.rows[rowIndex];
+        if (row.kind !== 'more') return { node, rowKey: row.key, path: node.path.concat(row.key) };
+      }
+    }
+    return { node, rowKey: null, path: node.path };
+  }
+  return null;
+}
+
+function findGraphTargetByPath(path) {
+  let current = graphNodes.find(node => node.depth === 0);
+  if (!current) return null;
+  for (const segment of path) {
+    const child = graphNodes.find(node => node.parentId === current.id && String(node.key) === String(segment));
+    if (child) {
+      current = child;
+      continue;
+    }
+    const row = current.rows.find(item => item.kind !== 'more' && String(item.key) === String(segment));
+    return row ? { node: current, rowKey: row.key } : null;
+  }
+  return { node: current, rowKey: null };
+}
+
+function findGraphNodeByPath(path) {
+  const target = findGraphTargetByPath(path);
+  return target ? target.node : null;
+}
+
+function exportGraphImage() {
+  const link = document.createElement('a');
+  link.download = 'json4editor-graph.png';
+  link.href = graphCanvas.toDataURL('image/png');
+  link.click();
+  showToast('🖼️ 图形已导出', 'success');
+}
+
+function syncGraphSelectionToTree() {
+  if (currentPath.length === 0) return;
+  // Expand tree to show path
+  const rootNode = treeContainer.querySelector('.tree-node');
+  if (!rootNode) return;
+
+  document.querySelectorAll('.tree-row.selected').forEach(el => el.classList.remove('selected'));
+
+  let current = rootNode;
+  for (const segment of currentPath) {
+    const toggle = current.querySelector(':scope > .tree-row .tree-toggle');
+    const children = current.querySelector(':scope > .tree-children');
+    if (toggle && children && children.classList.contains('collapsed')) {
+      toggleNode(toggle, children);
+    }
+    const childNodes = current.querySelectorAll(':scope > .tree-children > .tree-node');
+    let found = null;
+    childNodes.forEach(child => {
+      const childRow = child.querySelector(':scope > .tree-row');
+      if (childRow && childRow.dataset.key === segment) found = child;
+    });
+    if (!found) break;
+    current = found;
+  }
+
+  const row = current.querySelector(':scope > .tree-row');
+  if (row) {
+    row.classList.add('selected');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+// ===== Utility Functions =====
+function getType(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  return typeof value;
+}
+
+function formatValue(value, type) {
+  switch (type) {
+    case 'string': return `"${value}"`;
+    case 'number': return String(value);
+    case 'boolean': return String(value);
+    case 'null': return 'null';
+    default: return String(value);
+  }
+}
+
+function formatPathSegment(parent, segment) {
+  const key = String(segment);
+  if (Array.isArray(parent) && /^\d+$/.test(key)) return `[${key}]`;
+  if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) return `.${key}`;
+  return `[${JSON.stringify(key)}]`;
+}
+
+function formatJSONPath(path) {
+  let result = '$';
+  let parent = parsedJSON;
+
+  path.forEach(segment => {
+    result += formatPathSegment(parent, segment);
+    parent = parent !== null && typeof parent === 'object' ? parent[segment] : undefined;
+  });
+
+  return result;
+}
+
+function runSelfChecks() {
+  const previous = { parsedJSON, isValid, currentStats };
+
+  try {
+    parsedJSON = { '123': { 'a.b': 1 }, list: [{ 'x[y]': 2 }] };
+    if (formatJSONPath(['123', 'a.b']) !== '$["123"]["a.b"]') throw new Error('对象键路径转义失败');
+    if (formatJSONPath(['list', '0', 'x[y]']) !== '$.list[0]["x[y]"]') throw new Error('数组路径转义失败');
+
+    parsedJSON = null;
+    isValid = true;
+    currentStats = getJSONStats(parsedJSON);
+    if (!canRenderParsedJSON() || currentStats.nodes !== 1) throw new Error('null JSON 状态处理失败');
+
+    let deep = {};
+    let cursor = deep;
+    for (let i = 0; i <= MAX_RENDER_DEPTH; i++) {
+      cursor.next = {};
+      cursor = cursor.next;
+    }
+    if (!getJSONStats(deep).exceedsDepthLimit) throw new Error('深度限制检查失败');
+
+    showToast('自检通过', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast(`自检失败: ${error.message}`, 'error');
+  } finally {
+    parsedJSON = previous.parsedJSON;
+    isValid = previous.isValid;
+    currentStats = previous.currentStats;
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== Toast Notifications =====
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+</script>
+</body>
+</html>
