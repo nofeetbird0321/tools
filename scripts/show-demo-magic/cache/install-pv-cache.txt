@@ -1,4 +1,0 @@
-==> Downloading https://homebrew.bintray.com/bottles/pv-1.6.6.catalina.bottle.ta
-######################################################################## 100.0%
-==> Pouring pv-1.6.6.catalina.bottle.tar.gz
-🍺  /usr/local/Cellar/pv/1.6.6: 5 files, 79.4KB
