@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071b1d">
+  <meta name="description" content="Estimate organic visits, ad or subscription revenue, monthly costs, and payback time before you build a niche website.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Site Math Lab — Organic Revenue Calculator">
+  <meta property="og:description" content="Test the traffic and revenue assumptions for a niche website before you build it.">
+  <meta property="og:url" content="https://tools.nofeetbird.tech/site-math-lab/">
+  <link rel="canonical" href="https://tools.nofeetbird.tech/site-math-lab/">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <title>Niche Site Revenue Calculator | Site Math Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #e9f1eb;
+      --muted: #a3b7b1;
+      --faint: #68817b;
+      --base: #071b1d;
+      --panel: #102729;
+      --panel-raised: #153234;
+      --line: #244446;
+      --accent: #b8f06a;
+      --accent-ink: #17240d;
+      --blue: #83d8d2;
+      --negative: #ffad9b;
+      --radius: 18px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: radial-gradient(ellipse at 92% -15%, #174447 0, transparent 38%), var(--base);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.55;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    a { color: var(--blue); }
+    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 26px 0 38px; }
+    .brand { display: flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 750; letter-spacing: .015em; }
+    .brand img { width: 34px; height: 34px; }
+    .header-note { color: var(--muted); font-size: 14px; }
+    main { padding-bottom: 72px; }
+    .intro { display: grid; grid-template-columns: 1fr minmax(250px, 345px); gap: 30px; align-items: end; margin-bottom: 25px; }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { max-width: 680px; margin: 8px 0 8px; font-size: clamp(32px, 5vw, 52px); line-height: 1.03; letter-spacing: -.045em; }
+    .intro p { max-width: 660px; margin: 0; color: var(--muted); }
+    .input-note { justify-self: end; max-width: 315px; padding: 13px 15px; border: 1px solid var(--line); border-radius: 12px; background: #0c2224c9; color: var(--muted); font-size: 13px; }
+    .input-note strong { color: var(--ink); }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr); gap: 18px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, #112a2c, #0d2325); box-shadow: 0 20px 70px #0002; }
+    .controls { padding: 24px; }
+    .panel-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 17px; }
+    h2 { margin: 0; font-size: 18px; letter-spacing: -.015em; }
+    .small-label { color: var(--faint); font-size: 12px; }
+    .mode-switch { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: #091e20; }
+    .mode-switch button { border: 0; border-radius: 8px; padding: 8px 12px; background: transparent; color: var(--muted); font-size: 14px; }
+    .mode-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 750; }
+    .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 12px; }
+    label { display: block; margin: 0 0 6px; color: #d9e4dd; font-size: 14px; font-weight: 650; }
+    .field-help { display: block; min-height: 18px; margin-top: 4px; color: var(--faint); font-size: 12px; }
+    .input-wrap { position: relative; }
+    .input-wrap input { width: 100%; height: 46px; padding: 10px 13px; border: 1px solid #315256; border-radius: 10px; outline: 0; background: #081e20; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .input-wrap input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #83d8d221; }
+    .input-wrap .suffix { position: absolute; top: 10px; right: 12px; color: var(--faint); pointer-events: none; }
+    .input-wrap.has-suffix input { padding-right: 38px; }
+    .divider { height: 1px; margin: 20px 0; background: var(--line); }
+    .cost-title { margin: 0 0 12px; color: var(--muted); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .result { position: sticky; top: 16px; overflow: hidden; }
+    .result-top { padding: 25px 25px 20px; border-bottom: 1px solid var(--line); background: linear-gradient(135deg, #183b3d, #123033); }
+    .result-kicker { color: var(--blue); font-size: 13px; font-weight: 700; }
+    .big-number { margin: 5px 0 0; font-size: clamp(36px, 5vw, 54px); line-height: 1.12; font-weight: 780; letter-spacing: -.045em; font-variant-numeric: tabular-nums; }
+    .big-caption { color: var(--muted); font-size: 14px; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); }
+    .metric { min-height: 88px; padding: 15px 18px; background: #102729; }
+    .metric-label { color: var(--muted); font-size: 13px; }
+    .metric-value { margin-top: 3px; font-size: 21px; font-weight: 740; font-variant-numeric: tabular-nums; }
+    .metric-value.negative { color: var(--negative); }
+    .result-copy { margin: 0; padding: 17px 20px; color: var(--muted); font-size: 14px; }
+    .actions { display: flex; gap: 9px; padding: 0 20px 20px; }
+    .button-primary, .button-quiet { min-height: 42px; border-radius: 10px; font-size: 14px; font-weight: 700; }
+    .button-primary { flex: 1; border: 0; background: var(--accent); color: var(--accent-ink); }
+    .button-primary:hover { background: #caf68e; }
+    .button-quiet { padding: 0 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+    .button-quiet:hover { border-color: #507b78; background: #163234; }
+    .notice { display: flex; gap: 9px; margin-top: 15px; padding: 13px 15px; border: 1px solid #345d53; border-radius: 12px; background: #112d28; color: #c5d6c8; font-size: 13px; }
+    .notice b { color: var(--accent); }
+    .below { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+    .below .panel { padding: 21px 23px; }
+    .below p { margin: 9px 0 0; color: var(--muted); font-size: 14px; }
+    .formula-list { display: grid; gap: 8px; margin: 13px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 14px; }
+    .formula-list li { display: flex; gap: 10px; }
+    .formula-list li::before { content: ""; width: 6px; height: 6px; margin-top: 8px; flex: 0 0 6px; border-radius: 50%; background: var(--accent); }
+    .formula-list code { color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    footer { display: flex; justify-content: space-between; gap: 18px; padding: 21px 0 30px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; }
+    footer p { max-width: 730px; margin: 0; }
+    [hidden] { display: none !important; }
+    @media (max-width: 780px) {
+      .intro { grid-template-columns: 1fr; gap: 14px; }
+      .input-note { justify-self: stretch; max-width: none; }
+      .workspace { grid-template-columns: 1fr; }
+      .result { position: static; }
+    }
+    @media (max-width: 520px) {
+      .shell { width: min(100% - 26px, 1120px); }
+      header { padding: 17px 0 27px; }
+      main { padding-bottom: 38px; }
+      .controls { padding: 19px 16px; }
+      .field-grid { gap: 13px 10px; }
+      .below { grid-template-columns: 1fr; }
+      .result-top { padding: 21px 20px 17px; }
+      .actions { flex-wrap: wrap; }
+      .button-primary { flex-basis: 100%; }
+      footer { display: block; }
+      footer p + p { margin-top: 7px; }
+    }
+    @media print {
+      :root { color-scheme: light; --ink: #111; --muted: #444; --base: white; --panel: white; --line: #bbb; }
+      body { background: white; color: #111; }
+      header, .intro, .controls, .below, .actions, footer { display: none !important; }
+      .shell { width: 100%; }
+      main { padding: 0; }
+      .workspace { display: block; }
+      .panel { border: 1px solid #bbb; background: white; box-shadow: none; }
+      .result-top, .metric { background: white; }
+      .result-top { border-color: #bbb; }
+      .metrics { background: #bbb; }
+      .result-copy { color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <a class="brand" href="./" aria-label="Site Math Lab home"><img src="./favicon.svg" alt="" width="34" height="34"><span>SITE MATH LAB</span></a>
+      <span class="header-note">A planning tool for independent builders</span>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <div class="eyebrow">Search traffic → site economics</div>
+          <h1 id="page-title">Run the numbers before you build.</h1>
+          <p>Estimate what a niche website could earn from a keyword, then compare it with the costs you expect to carry.</p>
+        </div>
+        <aside class="input-note"><strong>Your assumptions, your result.</strong> The starter values are examples, not market averages. Replace them with your keyword and monetization research.</aside>
+      </section>
+
+      <section class="workspace" aria-label="Website revenue estimator">
+        <form class="panel controls" id="calculator" onsubmit="return false">
+          <div class="panel-heading">
+            <h2>Estimate a monthly run rate</h2>
+            <span class="small-label">USD · updates as you type</span>
+          </div>
+          <div class="mode-switch" role="group" aria-label="Revenue model">
+            <button type="button" id="ads-mode" aria-pressed="true">Display ads</button>
+            <button type="button" id="subscription-mode" aria-pressed="false">Subscription</button>
+          </div>
+          <div class="field-grid" style="margin-top:17px">
+            <div>
+              <label for="searches">Monthly searches</label>
+              <div class="input-wrap"><input id="searches" data-number type="number" min="0" step="100" value="10000" inputmode="numeric"></div>
+              <span class="field-help">From your keyword research</span>
+            </div>
+            <div>
+              <label for="capture">Searches you expect to capture</label>
+              <div class="input-wrap has-suffix"><input id="capture" data-number type="number" min="0" max="100" step="0.1" value="2" inputmode="decimal"><span class="suffix">%</span></div>
+              <span class="field-help">Ranking and click share combined</span>
+            </div>
+            <div>
+              <label for="pages">Page views per visit</label>
+              <div class="input-wrap"><input id="pages" data-number type="number" min="0" step="0.1" value="1.4" inputmode="decimal"></div>
+              <span class="field-help">Use 1 if you only have one page</span>
+            </div>
+            <div class="only-ads">
+              <label for="rpm">Ad revenue per 1,000 page views</label>
+              <div class="input-wrap"><input id="rpm" data-number type="number" min="0" step="0.5" value="5" inputmode="decimal"></div>
+              <span class="field-help">Use an RPM from your own ad account or research</span>
+            </div>
+            <div class="only-sub" hidden>
+              <label for="conversion">Visitor-to-paid conversion</label>
+              <div class="input-wrap has-suffix"><input id="conversion" data-number type="number" min="0" max="100" step="0.1" value="1" inputmode="decimal"><span class="suffix">%</span></div>
+              <span class="field-help">New paid subscribers from this month's visits</span>
+            </div>
+            <div class="only-sub" hidden>
+              <label for="price">Monthly price per subscriber</label>
+              <div class="input-wrap"><input id="price" data-number type="number" min="0" step="1" value="9" inputmode="decimal"></div>
+              <span class="field-help">USD, before payment fees and taxes</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <p class="cost-title">Costs to include</p>
+          <div class="field-grid">
+            <div>
+              <label for="monthly-cost">Monthly running costs</label>
+              <div class="input-wrap"><input id="monthly-cost" data-number type="number" min="0" step="1" value="5" inputmode="decimal"></div>
+              <span class="field-help">Hosting, APIs, or tools</span>
+            </div>
+            <div>
+              <label for="setup-cost">One-time launch costs</label>
+              <div class="input-wrap"><input id="setup-cost" data-number type="number" min="0" step="1" value="30" inputmode="decimal"></div>
+              <span class="field-help">Domain, template, or paid setup</span>
+            </div>
+          </div>
+        </form>
+
+        <section class="panel result" aria-labelledby="result-title" aria-live="polite">
+          <div class="result-top">
+            <div class="result-kicker" id="result-title">Estimated monthly revenue</div>
+            <div class="big-number" id="revenue">$0.00</div>
+            <div class="big-caption" id="revenue-caption">From the search traffic you entered</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><div class="metric-label">Estimated visits / month</div><div class="metric-value" id="visits">0</div></div>
+            <div class="metric"><div class="metric-label" id="audience-label">Page views / month</div><div class="metric-value" id="audience">0</div></div>
+            <div class="metric"><div class="metric-label">After monthly costs</div><div class="metric-value" id="net">$0.00</div></div>
+            <div class="metric"><div class="metric-label">Recover launch costs</div><div class="metric-value" id="payback">—</div></div>
+          </div>
+          <p class="result-copy" id="result-copy">Edit the example assumptions to see the estimate for your idea.</p>
+          <div class="actions">
+            <button class="button-primary" id="share" type="button">Copy a link with these inputs</button>
+            <button class="button-quiet" id="print" type="button">Print</button>
+            <button class="button-quiet" id="reset" type="button">Reset example</button>
+          </div>
+        </section>
+      </section>
+
+      <div class="notice"><span aria-hidden="true">✳</span><span><b>Use this to screen an idea, not promise an income.</b> Search rankings, actual ad rates, conversion, retention, fees, taxes, and review time can change the result.</span></div>
+
+      <section class="below" aria-label="How the estimate works">
+        <article class="panel">
+          <h2>What the calculator counts</h2>
+          <ul class="formula-list">
+            <li><span>Visits = monthly searches × expected capture rate</span></li>
+            <li><span>Ads = page views ÷ 1,000 × your RPM</span></li>
+            <li><span>Subscription = new paid users × monthly price</span></li>
+            <li><span>Net = estimated revenue − monthly running costs</span></li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h2>Before trusting a number</h2>
+          <p>Validate the search term, check the current results page, and use RPM or conversion data from a source you trust. The subscription view estimates the first month's new subscribers; it does not model renewals or churn.</p>
+        </article>
+      </section>
+    </main>
+    <footer>
+      <p>Calculations run in this browser. Nothing is sent to a server. Copying a share link puts your inputs into that link so you can choose whether to share it.</p>
+      <p>Planning estimate only · No payment processing</p>
+    </footer>
+  </div>
+  <script>
+    (() => {
+      const ids = ["searches", "capture", "pages", "rpm", "conversion", "price", "monthly-cost", "setup-cost"];
+      const fields = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+      const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+      const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+      let mode = "ads";
+      const number = id => Math.max(0, Number(fields[id].value) || 0);
+      const readUrl = () => {
+        const params = new URLSearchParams(location.search);
+        if (params.get("mode") === "subscription") mode = "subscription";
+        for (const id of ids) if (params.has(id)) fields[id].value = params.get(id);
+      };
+      const render = () => {
+        const searches = number("searches");
+        const visits = searches * number("capture") / 100;
+        const pages = visits * number("pages");
+        const paidUsers = visits * number("conversion") / 100;
+        const revenue = mode === "ads" ? pages / 1000 * number("rpm") : paidUsers * number("price");
+        const monthlyCost = number("monthly-cost");
+        const launchCost = number("setup-cost");
+        const net = revenue - monthlyCost;
+        document.getElementById("revenue").textContent = currency.format(revenue);
+        document.getElementById("visits").textContent = whole.format(visits);
+        document.getElementById("audience").textContent = whole.format(mode === "ads" ? pages : paidUsers);
+        document.getElementById("audience-label").textContent = mode === "ads" ? "Page views / month" : "New paid users / month";
+        document.getElementById("net").textContent = currency.format(net);
+        document.getElementById("net").classList.toggle("negative", net < 0);
+        document.getElementById("result-title").textContent = mode === "ads" ? "Estimated monthly ad revenue" : "New subscriber MRR added";
+        document.getElementById("revenue-caption").textContent = mode === "ads" ? "Page views × the RPM you entered" : "New paid users × the monthly price you entered";
+        const payback = document.getElementById("payback");
+        if (launchCost === 0) payback.textContent = "No setup cost";
+        else if (net > 0) payback.textContent = `${(launchCost / net).toFixed(1)} mo`;
+        else payback.textContent = "Not at this estimate";
+        document.getElementById("result-copy").textContent = net > 0
+          ? `At these assumptions, the monthly estimate is ${currency.format(net)} above running costs. Launch costs are recovered in about ${(launchCost / net).toFixed(1)} months if the estimate holds.`
+          : net < 0
+            ? `At these assumptions, estimated revenue is ${currency.format(Math.abs(net))} below monthly running costs. Change the inputs to see what would need to improve.`
+            : "At these assumptions, estimated revenue exactly covers monthly running costs.";
+      };
+      const setMode = next => {
+        mode = next;
+        document.getElementById("ads-mode").setAttribute("aria-pressed", String(mode === "ads"));
+        document.getElementById("subscription-mode").setAttribute("aria-pressed", String(mode === "subscription"));
+        document.querySelectorAll(".only-ads").forEach(el => el.hidden = mode !== "ads");
+        document.querySelectorAll(".only-sub").forEach(el => el.hidden = mode !== "subscription");
+        render();
+      };
+      readUrl();
+      ids.forEach(id => fields[id].addEventListener("input", render));
+      document.getElementById("ads-mode").addEventListener("click", () => setMode("ads"));
+      document.getElementById("subscription-mode").addEventListener("click", () => setMode("subscription"));
+      document.getElementById("print").addEventListener("click", () => window.print());
+      document.getElementById("reset").addEventListener("click", () => {
+        for (const [id, value] of Object.entries({ searches: 10000, capture: 2, pages: 1.4, rpm: 5, conversion: 1, price: 9, "monthly-cost": 5, "setup-cost": 30 })) fields[id].value = value;
+        history.replaceState(null, "", location.pathname);
+        setMode("ads");
+      });
+      document.getElementById("share").addEventListener("click", async event => {
+        const url = new URL(location.href);
+        url.search = "";
+        url.searchParams.set("mode", mode);
+        for (const id of ids) url.searchParams.set(id, fields[id].value || "0");
+        try {
+          await navigator.clipboard.writeText(url.toString());
+          event.currentTarget.textContent = "Link copied";
+        } catch {
+          event.currentTarget.textContent = "Clipboard unavailable";
+        }
+        setTimeout(() => event.currentTarget.textContent = "Copy a link with these inputs", 1800);
+      });
+      setMode(mode);
+    })();
+  </script>
+</body>
+</html>
