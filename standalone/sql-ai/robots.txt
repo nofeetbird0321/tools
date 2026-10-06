@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sql-ai.nofeetbird.tech/sitemap.xml
